@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Retro Battle Snake (Enhanced Edition)</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #121212;
+            color: #e0e0e0;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #container {
+            display: flex;
+            background: #1e1e1e;
+            border: 3px solid #333;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        #sidebar {
+            width: 260px;
+            background: #252525;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            border-right: 2px solid #333;
+        }
+        #sidebar h2 {
+            margin-top: 0;
+            font-size: 20px;
+            color: #4CAF50;
+            text-align: center;
+            letter-spacing: 2px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+        }
+        #sidebar h3 {
+            font-size: 14px;
+            color: #aaa;
+            margin: 15px 0 5px 0;
+            letter-spacing: 1px;
+        }
+        .panel-box {
+            background: #181818;
+            border: 1px solid #444;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 6px;
+        }
+        .stat-label { color: #888; }
+        .stat-value { font-weight: bold; color: #fff; }
+        #canvas-container {
+            position: relative;
+        }
+        canvas {
+            display: block;
+            background: #000;
+        }
+        .btn {
+            background: #4CAF50;
+            color: #fff;
+            border: none;
+            padding: 10px;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background 0.2s;
+            margin-top: auto;
+            text-align: center;
+        }
+        .btn:hover { background: #45a049; }
+        .btn:active { background: #3d8b40; }
+        select {
+            width: 100%;
+            background: #2a2a2a;
+            color: #fff;
+            border: 1px solid #555;
+            padding: 6px;
+            font-family: 'Courier New', Courier, monospace;
+            border-radius: 4px;
+            outline: none;
+        }
+        #modal {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(20, 20, 20, 0.95);
+            border: 2px solid #4CAF50;
+            padding: 30px;
+            text-align: center;
+            border-radius: 8px;
+            z-index: 20;
+            min-width: 300px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+        }
+        #modal h1 {
+            margin-top: 0;
+            font-size: 28px;
+            letter-spacing: 2px;
+        }
+        #modal p {
+            font-size: 14px;
+            color: #ccc;
+            margin-bottom: 20px;
+        }
+        .buff-bar-container {
+            width: 100%;
+            background: #333;
+            height: 10px;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+        .buff-bar-fill {
+            height: 100%;
+            background: #ff9800;
+            width: 0%;
+            transition: width 0.1s linear;
+        }
+    </style>
+</head>
+<body>
+
+<div id="container">
+    <div id="sidebar">
+        <h2>SNAKE BATTLE</h2>
+        
+        <h3>DIFFICULTY</h3>
+        <div class="panel-box">
+            <select id="difficultySelect">
+                <option value="cake">Cake (Easy)</option>
+                <option value="normal" selected>Normal (Medium)</option>
+                <option value="nightmare">Nightmare (Hard)</option>
+            </select>
+        </div>
+        
+        <button class="btn" style="width: 100%; margin-top: 5px; margin-bottom: 5px; padding: 8px; font-size: 14px;" onclick="openRules()">RULES</button>
+
+        <h3>PLAYER STATUS</h3>
+        <div class="panel-box">
+            <div class="stat-row"><span class="stat-label">Length:</span><span id="pLen" class="stat-value">5</span></div>
+            <div class="stat-row"><span class="stat-label">Speed:</span><span id="pSpd" class="stat-value">5.00</span></div>
+            <div class="stat-row"><span class="stat-label">Buff Goal:</span><span id="pGoal" class="stat-value">0/5</span></div>
+            <div style="margin-top:8px;"><span class="stat-label" id="buffStatusLabel">Buff State: INACTIVE</span></div>
+            <div class="buff-bar-container"><div id="buffBarFill" class="buff-bar-fill"></div></div>
+        </div>
+
+        <h3>OPPONENT (AI)</h3>
+        <div class="panel-box">
+            <div class="stat-row"><span class="stat-label">Length:</span><span id="aLen" class="stat-value">5</span></div>
+            <div class="stat-row"><span class="stat-label">Speed:</span><span id="aSpd" class="stat-value">5.00</span></div>
+            <div class="stat-row"><span class="stat-label">Buff Goal:</span><span id="aGoal" class="stat-value">0/5</span></div>
+        </div>
+
+        <h3>MATCH INFO</h3>
+        <div class="panel-box">
+            <div class="stat-row"><span class="stat-label">Time Left:</span><span id="timerVal" class="stat-value">02:00</span></div>
+        </div>
+
+        <button class="btn" onclick="startGame()">START BATTLE</button>
+    </div>
+
+    <div id="canvas-container">
+        <canvas id="gameCanvas" width="600" height="600"></canvas>
+        <div id="modal">
+            <h1 id="resultTitle">GAME OVER</h1>
+            <p id="resultSub"></p>
+            <button class="btn" onclick="restartGame()">Play Again</button>
+        </div>
+
+        <div id="rulesModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); justify-content: center; align-items: center; z-index: 30;">
+            <div style="background: #2a2a2a; padding: 25px; border-radius: 8px; width: 450px; max-width: 90%; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
+                <h2 style="color: #4CAF50; margin-top: 0; margin-bottom: 15px; text-align: center;">GAME RULES</h2>
+                <ul style="padding-left: 20px; line-height: 1.6; font-size: 14px; color: #ddd; margin-bottom: 20px;">
+                    <li><b>Controls:</b> Use <b>WASD</b> or Arrow keys to steer your snake.</li>
+                    <li><b>Wall Wrapping:</b> Hitting a boundary wall warps you out from the exact matching position on the opposite side.</li>
+                    <li><b>Colors:</b> Player is <b>Blue</b> (normal) / <b>Red</b> (buffed). AI is <b>Yellow</b> (normal) / <b>Red</b> (buffed). Both buffs last accurate 8 seconds.</li>
+                    <li><b>Fruit Limit:</b> Maximum 2 fruits allowed on map simultaneously. First fruits spawn 5 seconds after start.</li>
+                </ul>
+                <div style="text-align: center;">
+                    <button class="btn" onclick="closeRules()" style="padding: 8px 25px; font-size: 14px;">GOT IT</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+const GRID_SIZE = 20;
+const TILE_COUNT = 30;
+
+let gameActive = false;
+let gamePaused = false;
+let gameTimer = 120; // 2 minutes (120 seconds)
+let timerInterval = null;
+let player, ai, foods, particles;
+
+function openRules() {
+    document.getElementById('rulesModal').style.display = 'flex';
+}
+
+function closeRules() {
+    document.getElementById('rulesModal').style.display = 'none';
+}
+
+class Snake {
+    constructor(isPlayer, startX, startY, color) {
+        this.isPlayer = isPlayer;
+        this.color = color;
+        this.reset(startX, startY);
+    }
+
+    reset(startX, startY) {
+        this.body = [
+            {x: startX, y: startY},
+            {x: startX, y: startY + 1},
+            {x: startX, y: startY + 2},
+            {x: startX, y: startY + 3},
+            {x: startX, y: startY + 4}
+        ];
+        this.dir = {x: 0, y: -1};
+        this.nextDir = {x: 0, y: -1};
+        this.length = 5;
+        this.score = 0;
+        this.buffGoalCount = 0;
+        this.targetBuffGoal = 5;
+        this.isBuffed = false;
+        this.buffTimer = 0;
+    }
+
+    get speed() {
+        let spd = 5.0 - (this.length - 5) * 0.16;
+        return Math.max(spd, 1.5);
+    }
+
+    update(dt) {
+        this.dir = this.nextDir;
+        let head = {x: this.body[0].x + this.dir.x, y: this.body[0].y + this.dir.y};
+        
+        if (head.x < 0) head.x = TILE_COUNT - 1;
+        else if (head.x >= TILE_COUNT) head.x = 0;
+        if (head.y < 0) head.y = TILE_COUNT - 1;
+        else if (head.y >= TILE_COUNT) head.y = 0;
+
+        this.body.unshift(head);
+        if (this.body.length > this.length) {
+            this.body.pop();
+        }
+
+        if (this.isBuffed) {
+            this.buffTimer -= dt;
+            if (this.buffTimer <= 0) {
+                this.isBuffed = false;
+                this.buffTimer = 0;
+            }
+        }
+    }
+}
+
+function initGame() {
+    player = new Snake(true, 10, 15, '#2196F3'); // Blue player
+    ai = new Snake(false, 20, 15, '#FFEB3B');    // Yellow AI normal
+    foods = [];
+    particles = [];
+    gameTimer = 120; // 2 minutes
+}
+
+function spawnFood(count) {
+    let difficulty = document.getElementById('difficultySelect').value;
+
+    for (let i = 0; i < count; i++) {
+        if (foods.length >= 2) break;
+
+        let fx, fy, overlap;
+        do {
+            overlap = false;
+            if (difficulty === 'nightmare' && Math.random() < 0.25) {
+                fx = 5 + Math.floor(Math.random() * 20);
+                fy = 5 + Math.floor(Math.random() * 20);
+            } else {
+                fx = Math.floor(Math.random() * TILE_COUNT);
+                fy = Math.floor(Math.random() * TILE_COUNT);
+            }
+
+            [...player.body, ...ai.body].forEach(seg => {
+                if (seg.x === fx && seg.y === fy) overlap = true;
+            });
+            foods.forEach(f => {
+                if (f.x === fx && f.y === fy) overlap = true;
+            });
+        } while (overlap);
+
+        let type = Math.random() < 0.2 ? 'golden' : 'normal';
+        foods.push({x: fx, y: fy, type: type});
+    }
+}
+
+window.addEventListener('keydown', e => {
+    if (!gameActive) return;
+    switch(e.key.toLowerCase()) {
+        case 'w': case 'arrowup':
+            if (player.dir.y === 0) player.nextDir = {x: 0, y: -1}; break;
+        case 's': case 'arrowdown':
+            if (player.dir.y === 0) player.nextDir = {x: 0, y: 1}; break;
+        case 'a': case 'arrowleft':
+            if (player.dir.x === 0) player.nextDir = {x: -1, y: 0}; break;
+        case 'd': case 'arrowright':
+            if (player.dir.x === 0) player.nextDir = {x: 1, y: 0}; break;
+    }
+});
+
+function startGame() {
+    document.getElementById('modal').style.display = 'none';
+    initGame();
+    gameActive = true;
+    
+    setTimeout(() => {
+        if (gameActive) {
+            spawnFood(2);
+        }
+    }, 5000);
+
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+        if (!gamePaused && gameActive) {
+            gameTimer--;
+            updateTimerDisplay();
+            if (gameTimer <= 0) {
+                endGame("TIME UP", player.length >= ai.length ? "Victory by length advantage!" : "Defeat: Opponent had longer length.");
+            }
+        }
+    }, 1000);
+
+    lastUpdate = performance.now();
+    requestAnimationFrame(gameLoop);
+}
+
+function updateTimerDisplay() {
+    let m = Math.floor(gameTimer / 60).toString().padStart(2, '0');
+    let s = (gameTimer % 60).toString().padStart(2, '0');
+    document.getElementById('timerVal').innerText = `${m}:${s}`;
+}
+
+let lastUpdate = 0;
+let playerAccumulator = 0;
+let aiAccumulator = 0;
+
+function gameLoop(timestamp) {
+    if (!gameActive) return;
+    
+    let dt = (timestamp - lastUpdate) / 1000;
+    lastUpdate = timestamp;
+
+    if (player.isBuffed) {
+        player.buffTimer -= dt;
+        if (player.buffTimer <= 0) {
+            player.isBuffed = false;
+            player.buffTimer = 0;
+        }
+    }
+    if (ai.isBuffed) {
+        ai.buffTimer -= dt;
+        if (ai.buffTimer <= 0) {
+            ai.isBuffed = false;
+            ai.buffTimer = 0;
+        }
+    }
+
+    playerAccumulator += dt * player.speed;
+    aiAccumulator += dt * ai.speed;
+
+    if (playerAccumulator >= 1) {
+        player.update(0);
+        playerAccumulator = 0;
+        checkCollisions(player, ai);
+    }
+
+    if (aiAccumulator >= 1) {
+        aiUpdate();
+        ai.update(0);
+        aiAccumulator = 0;
+        checkCollisions(ai, player);
+    }
+
+    updateUI();
+    render();
+    requestAnimationFrame(gameLoop);
+}
+
+function aiUpdate() {
+    let head = ai.body[0];
+    let difficulty = document.getElementById('difficultySelect').value;
+    
+    let allDirs = [
+        {x: 0, y: -1}, {x: 0, y: 1}, {x: -1, y: 0}, {x: 1, y: 0}
+    ];
+
+    let safeDirs = allDirs.filter(d => {
+        if (d.x === -ai.dir.x && d.y === -ai.dir.y) return false;
+
+        let nextX = head.x + d.x;
+        let nextY = head.y + d.y;
+
+        if (nextX < 0) nextX = TILE_COUNT - 1;
+        else if (nextX >= TILE_COUNT) nextX = 0;
+        if (nextY < 0) nextY = TILE_COUNT - 1;
+        else if (nextY >= TILE_COUNT) nextY = 0;
+
+        for (let seg of ai.body) {
+            if (nextX === seg.x && nextY === seg.y) return false;
+        }
+
+        for (let seg of player.body) {
+            if (nextX === seg.x && nextY === seg.y) return false;
+        }
+
+        return true;
+    });
+
+    if (safeDirs.length === 0) {
+        safeDirs = allDirs.filter(d => !(d.x === -ai.dir.x && d.y === -ai.dir.y));
+        if (safeDirs.length === 0) safeDirs = [ai.dir];
+    }
+
+    let target = null;
+    let isHumanBuffedAIUnbuffed = player.isBuffed && !ai.isBuffed;
+
+    if (difficulty === 'nightmare') {
+        if (isHumanBuffedAIUnbuffed) {
+            let pHead = player.body[0];
+            safeDirs.sort((a, b) => {
+                let distA = Math.abs((head.x + a.x) - pHead.x) + Math.abs((head.y + a.y) - pHead.y);
+                let distB = Math.abs((head.x + b.x) - pHead.x) + Math.abs((head.y + b.y) - pHead.y);
+                return distB - distA;
+            });
+            ai.nextDir = safeDirs[0];
+            return;
+        } else {
+            if (ai.isBuffed) {
+                target = player.body[0];
+            } else {
+                if (foods.length > 0) {
+                    let closestFood = foods[0];
+                    let minDist = Infinity;
+                    for (let f of foods) {
+                        let dist = Math.abs(head.x - f.x) + Math.abs(head.y - f.y);
+                        if (dist < minDist) {
+                            minDist = dist;
+                            closestFood = f;
+                        }
+                    }
+                    target = closestFood;
+                } else {
+                    target = player.body[0];
+                }
+            }
+        }
+    } else {
+        if (foods.length > 0) {
+            let closestFood = foods[0];
+            let minDist = Infinity;
+            for (let f of foods) {
+                let dist = Math.abs(head.x - f.x) + Math.abs(head.y - f.y);
+                if (dist < minDist) {
+                    minDist = dist;
+                    closestFood = f;
+                }
+            }
+            target = closestFood;
+        } else {
+            target = player.body[0];
+        }
+    }
+    if (!target) target = player.body[0];
+
+    safeDirs.sort((a, b) => {
+        let distA = Math.abs((head.x + a.x) - target.x) + Math.abs((head.y + a.y) - target.y);
+        let distB = Math.abs((head.x + b.x) - target.x) + Math.abs((head.y + b.y) - target.y);
+        return distA - distB;
+    });
+
+    ai.nextDir = safeDirs[0];
+}
+
+function checkCollisions(snake, opponent) {
+    let head = snake.body[0];
+
+    for (let i = 1; i < snake.body.length; i++) {
+        if (head.x === snake.body[i].x && head.y === snake.body[i].y) {
+            if (snake.isPlayer) {
+                endGame("GAME OVER", "You bit your own tail!");
+            } else {
+                endGame("VICTORY!", "Opponent bit its own tail!");
+            }
+            return;
+        }
+    }
+
+    for (let i = 0; i < opponent.body.length; i++) {
+        let seg = opponent.body[i];
+        if (head.x === seg.x && head.y === seg.y) {
+            if (i === 0) {
+                if (snake.isBuffed && !opponent.isBuffed) {
+                    endGame("VICTORY!", "You destroyed the enemy head-on during your buff!");
+                } else if (!snake.isBuffed && opponent.isBuffed) {
+                    endGame("GAME OVER", "Enemy destroyed you head-on!");
+                } else {
+                    if (snake.length > opponent.length) {
+                        endGame("VICTORY!", "Head-on collision won by greater length!");
+                    } else {
+                        endGame("GAME OVER", "Head-on collision lost.");
+                    }
+                }
+            } else {
+                if (snake.isBuffed) {
+                    opponent.body.splice(i);
+                    opponent.length = opponent.body.length;
+                } else {
+                    if (snake.isPlayer) {
+                        endGame("GAME OVER", "You crashed into the enemy's body.");
+                    } else {
+                        endGame("VICTORY!", "Opponent crashed into your body.");
+                    }
+                }
+            }
+            return;
+        }
+    }
+
+    foods.forEach((f, idx) => {
+        if (head.x === f.x && head.y === f.y) {
+            snake.length += (f.type === 'golden' ? 3 : 1);
+            snake.score += (f.type === 'golden' ? 30 : 10);
+            snake.buffGoalCount++;
+            
+            if (snake.buffGoalCount >= snake.targetBuffGoal) {
+                snake.isBuffed = true;
+                snake.buffTimer = 8.0;
+                snake.buffGoalCount = 0;
+                snake.targetBuffGoal += 2;
+            }
+
+            foods.splice(idx, 1);
+            spawnFood(1);
+        }
+    });
+}
+
+function updateUI() {
+    document.getElementById('pLen').innerText = player.length;
+    document.getElementById('pSpd').innerText = player.speed.toFixed(2);
+    document.getElementById('pGoal').innerText = `${player.buffGoalCount}/${player.targetBuffGoal}`;
+    
+    let buffLabel = document.getElementById('buffStatusLabel');
+    let buffFill = document.getElementById('buffBarFill');
+    if (player.isBuffed) {
+        buffLabel.innerText = `Buff State: ACTIVE (${player.buffTimer.toFixed(1)}s)`;
+        buffLabel.style.color = '#ff9800';
+        buffFill.style.width = `${(player.buffTimer / 8.0) * 100}%`;
+    } else {
+        buffLabel.innerText = "Buff State: INACTIVE";
+        buffLabel.style.color = '#888';
+        buffFill.style.width = '0%';
+    }
+
+    document.getElementById('aLen').innerText = ai.length;
+    document.getElementById('aSpd').innerText = ai.speed.toFixed(2);
+    document.getElementById('aGoal').innerText = `${ai.buffGoalCount}/${ai.targetBuffGoal}`;
+}
+
+function render() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    ctx.strokeStyle = '#151515';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= TILE_COUNT; i++) {
+        ctx.beginPath();
+        ctx.moveTo(i * GRID_SIZE, 0);
+        ctx.lineTo(i * GRID_SIZE, canvas.height);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(0, i * GRID_SIZE);
+        ctx.lineTo(canvas.width, i * GRID_SIZE);
+        ctx.stroke();
+    }
+
+    foods.forEach(f => {
+        ctx.fillStyle = f.type === 'golden' ? '#FFD700' : '#E91E63';
+        ctx.shadowColor = ctx.fillStyle;
+        ctx.shadowBlur = 8;
+        ctx.fillRect(f.x * GRID_SIZE + 2, f.y * GRID_SIZE + 2, GRID_SIZE - 4, GRID_SIZE - 4);
+        ctx.shadowBlur = 0;
+    });
+
+    drawSnake(player);
+    drawSnake(ai);
+}
+
+function drawSnake(snake) {
+    snake.body.forEach((seg, idx) => {
+        if (snake.isBuffed) {
+            ctx.fillStyle = idx === 0 ? '#ff3d00' : '#f44336';
+            ctx.shadowColor = '#f44336';
+            ctx.shadowBlur = 10;
+        } else {
+            ctx.fillStyle = snake.color;
+            ctx.shadowBlur = 0;
+        }
+        ctx.fillRect(seg.x * GRID_SIZE + 1, seg.y * GRID_SIZE + 1, GRID_SIZE - 2, GRID_SIZE - 2);
+    });
+    ctx.shadowBlur = 0;
+}
+
+function endGame(title, subtitle) {
+    gameActive = false;
+    clearInterval(timerInterval);
+    document.getElementById('resultTitle').innerText = title;
+    document.getElementById('resultSub').innerText = subtitle;
+    document.getElementById('modal').style.display = 'block';
+}
+
+function restartGame() {
+    document.getElementById('modal').style.display = 'none';
+    startGame();
+}
+</script>
+
+</body>
+</html>
